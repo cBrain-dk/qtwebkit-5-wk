@@ -40,6 +40,8 @@
 #endif
 #include <qnetworkrequest.h>
 #include <qregion.h>
+#include "RenderObject.h"
+#include "RenderView.h"
 
 using namespace WebCore;
 
@@ -818,6 +820,114 @@ bool QWebFrame::event(QEvent *e)
 }
 
 #ifndef QT_NO_PRINTER
+QWebPrinterPrivate::QWebPrinterPrivate(const QWebFrame *f, QPaintDevice *printer, QPainter &p)
+    : printContext(f->d->frame)
+    , painter(p)
+    , frame(f)
+    , graphicsContext(&p)
+{
+    const qreal zoomFactorX = printer->logicalDpiX() / qt_defaultDpi();
+    const qreal zoomFactorY = printer->logicalDpiY() / qt_defaultDpi();
+    IntRect pageRect(0, 0,
+                     int(printer->width() / zoomFactorX),
+                     int(printer->height() / zoomFactorY));
+    
+    printContext.begin(pageRect.width());
+    float pageHeight = 0;
+    printContext.computePageRects(pageRect, /* headerHeight */ 0, /* footerHeight */ 0, /* userScaleFactor */ 1.0, pageHeight);
+    
+    painter.scale(zoomFactorX, zoomFactorY);
+    printWidth = pageRect.width();
+}
+
+QWebPrinterPrivate::~QWebPrinterPrivate() 
+{
+    printContext.end();
+}
+
+/*!
+    \class QWebPrinter
+    \since 4.7
+    \brief The QWebPrinter controls printing of a \l{QWebFrame::}
+
+    \inmodule QtWebKit
+
+    \sa QWebFrame
+*/
+QWebPrinter::QWebPrinter(const QWebFrame *frame, QPaintDevice *printer, QPainter &painter)
+    : d(new QWebPrinterPrivate(frame, printer, painter))
+{}
+
+QWebPrinter::~QWebPrinter() 
+{
+    delete d; 
+}
+
+/*!
+    Print a page of the frame. \a i is  the number of the page to print, 
+    and must be between 1 and \fn QWebPrinter::pageCount() .
+*/
+void QWebPrinter::spoolPage(int i) const
+{
+    if (i < 1 || i > d->printContext.pageCount()) 
+        return;
+    d->printContext.spoolPage(d->graphicsContext, i - 1, d->printWidth);
+}
+
+/*!
+    Returns the number of pages of the frame when printed.
+*/
+int QWebPrinter::pageCount() const
+{
+    return d->printContext.pageCount();
+}
+
+QPair<int, QRectF> QWebPrinter::elementLocation(const QWebElement & e)
+{
+    //Compute a mapping from node to render object once and for all
+    if (d->elementToRenderObject.empty())
+    for (WebCore::RenderObject * o=d->frame->d->frame->document()->renderer(); o; o=o->nextInPreOrder())
+        if (o->node())
+            d->elementToRenderObject[o->node()] = o;
+        
+    if (!d->elementToRenderObject.contains(e.m_element))
+        return QPair<int,QRectF>(-1, QRectF());
+    const WebCore::RenderObject * ro = d->elementToRenderObject[e.m_element];
+    const Vector<IntRect> & pageRects = d->printContext.getPageRects();
+
+    if (pageRects.size() == 0)
+        return QPair<int,QRectF>(-1, QRectF());
+
+    WebCore::RenderView *root = toRenderView(d->frame->d->frame->document()->renderer());
+    //We need the scale factor, because pages are shrinked
+    float scale = (float)d->printWidth / (float)root->width();
+
+    QRectF r(const_cast<WebCore::RenderObject *>(ro)->absoluteBoundingBoxRect());
+    
+    int low=0;
+    int high=pageRects.size();
+    int c = r.y() + r.height() / 2;
+    while(low <= high) {
+        int m = (low+high)/2;
+        if(c < pageRects[m].y())
+            high = m-1;
+        else if(c > pageRects[m].maxY())
+            low = m +1;
+        else {
+            QRectF tr = r.translated(0, -pageRects[m].y());
+            return QPair<int, QRectF>(m+1, QRect(tr.x() * scale, tr.y()*scale, tr.width()*scale, tr.height()*scale));
+        }
+    }
+    return QPair<int,QRectF>(-1, QRectF());
+}
+
+/*!
+    Return the painter used for printing.
+*/
+QPainter * QWebPrinter::painter() {
+    return &d->painter;
+}
+
 /*!
     Prints the frame to the given \a printer.
 
@@ -827,17 +937,8 @@ void QWebFrame::print(QPrinter *printer) const
 {
 #if HAVE(QTPRINTSUPPORT)
     QPainter painter;
-    if (!painter.begin(printer))
-        return;
-
-    const qreal zoomFactorX = (qreal)printer->logicalDpiX() / qt_defaultDpi();
-    const qreal zoomFactorY = (qreal)printer->logicalDpiY() / qt_defaultDpi();
-
-    QRect qprinterRect = printer->pageRect();
-
-    QRect pageRect(0, 0, int(qprinterRect.width() / zoomFactorX), int(qprinterRect.height() / zoomFactorY));
-
-    QtPrintContext printContext(&painter, pageRect, d);
+    painter.begin(printer);
+    QWebPrinter p(this, printer, painter);
 
     int docCopies;
     int pageCopies;
@@ -855,11 +956,11 @@ void QWebFrame::print(QPrinter *printer) const
 
     if (!fromPage && !toPage) {
         fromPage = 1;
-        toPage = printContext.pageCount();
+        toPage = p.pageCount();
     }
     // paranoia check
     fromPage = qMax(1, fromPage);
-    toPage = qMin(static_cast<int>(printContext.pageCount()), toPage);
+    toPage = qMin(static_cast<int>(p.pageCount()), toPage);
     if (toPage < fromPage) {
         // if the user entered a page range outside the actual number
         // of printable pages, just return
@@ -873,8 +974,6 @@ void QWebFrame::print(QPrinter *printer) const
         ascending = false;
     }
 
-    painter.scale(zoomFactorX, zoomFactorY);
-
     for (int i = 0; i < docCopies; ++i) {
         int page = fromPage;
         while (true) {
@@ -883,7 +982,7 @@ void QWebFrame::print(QPrinter *printer) const
                     || printer->printerState() == QPrinter::Error) {
                     return;
                 }
-                printContext.spoolPage(page - 1, pageRect.width());
+				p.spoolPage(page);
                 if (j < pageCopies - 1)
                     printer->newPage();
             }

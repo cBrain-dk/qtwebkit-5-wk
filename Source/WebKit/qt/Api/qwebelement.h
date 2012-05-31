@@ -157,6 +157,7 @@ private:
     friend class QWebPage;
     friend class QWebPagePrivate;
     friend class QtWebElementRuntime;
+    friend class QWebPrinter;
 
     QWebElementPrivate* d;
     WebCore::Element* m_element;

@@ -25,7 +25,9 @@
 
 #include "qwebframe.h"
 #include "qwebpage_p.h"
-
+#include <qpainter.h>
+#include "PrintContext.h"
+#include "GraphicsContext.h"
 
 namespace WebCore {
 class FrameLoaderClientQt;
@@ -35,6 +37,19 @@ class Scrollbar;
 class TextureMapperLayer;
 }
 class QWebPage;
+
+class QWebPrinterPrivate {
+public:
+    WebCore::PrintContext printContext;
+    QPainter & painter;
+    const QWebFrame * frame;
+    WebCore::GraphicsContext graphicsContext;
+    int printWidth;
+    QHash<const WebCore::Node*, const WebCore::RenderObject *> elementToRenderObject;
+    
+    QWebPrinterPrivate(const QWebFrame * frame, QPaintDevice *printer, QPainter &p);
+    ~QWebPrinterPrivate();
+};
 
 class QWebFramePrivate : public QWebFrameAdapter {
 public:
