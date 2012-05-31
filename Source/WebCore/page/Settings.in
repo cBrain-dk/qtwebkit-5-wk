@@ -203,3 +203,6 @@ selectTrailingWhitespaceEnabled initial=defaultSelectTrailingWhitespaceEnabled
 
 selectionIncludesAltImageText initial=true
 useLegacyBackgroundSizeShorthandBehavior initial=false
+
+# wkhtmltopdf specific settings
+printingMediaType type=String, initial=""print""
