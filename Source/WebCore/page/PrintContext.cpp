@@ -25,6 +25,7 @@
 #include "Frame.h"
 #include "FrameView.h"
 #include "RenderView.h"
+#include "Settings.h"
 #include "StyleInheritedData.h"
 #include <wtf/text/WTFString.h>
 
@@ -165,11 +166,21 @@ void PrintContext::begin(float width, float height)
     // This function can be called multiple times to adjust printing parameters without going back to screen mode.
     m_isPrinting = true;
 
+    float minimumShrinkFactor = m_frame->settings() ? 
+        m_frame->settings()->printingMinimumShrinkFactor() : 0.0f;
+    float maximumShrinkFactor = m_frame->settings() ? 
+        m_frame->settings()->printingMaximumShrinkFactor() : 0.0f;
+
+    if (maximumShrinkFactor < minimumShrinkFactor || minimumShrinkFactor <= 0.0f) {
+        minimumShrinkFactor = printingMinimumShrinkFactor;
+        maximumShrinkFactor = printingMaximumShrinkFactor;
+    }
+    
     FloatSize originalPageSize = FloatSize(width, height);
-    FloatSize minLayoutSize = m_frame->resizePageRectsKeepingRatio(originalPageSize, FloatSize(width * printingMinimumShrinkFactor, height * printingMinimumShrinkFactor));
+    FloatSize minLayoutSize = m_frame->resizePageRectsKeepingRatio(originalPageSize, FloatSize(width * minimumShrinkFactor, height * minimumShrinkFactor));
 
     // This changes layout, so callers need to make sure that they don't paint to screen while in printing mode.
-    m_frame->setPrinting(true, minLayoutSize, originalPageSize, printingMaximumShrinkFactor / printingMinimumShrinkFactor, AdjustViewSize);
+    m_frame->setPrinting(true, minLayoutSize, originalPageSize, maximumShrinkFactor / minimumShrinkFactor, AdjustViewSize);
 }
 
 float PrintContext::computeAutomaticScaleFactor(const FloatSize& availablePaperSize)

@@ -206,3 +206,5 @@ useLegacyBackgroundSizeShorthandBehavior initial=false
 
 # wkhtmltopdf specific settings
 printingMediaType type=String, initial=""print""
+printingMinimumShrinkFactor type=float, initial=0.0f
+printingMaximumShrinkFactor type=float, initial=0.0f
