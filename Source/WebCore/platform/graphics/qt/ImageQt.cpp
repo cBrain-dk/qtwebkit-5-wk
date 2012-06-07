@@ -39,6 +39,7 @@
 #include "ImageObserver.h"
 #include "ShadowBlur.h"
 #include "StillImageQt.h"
+#include "SharedBuffer.h"
 #include <wtf/text/WTFString.h>
 
 #include <QCoreApplication>
@@ -323,7 +324,8 @@ void BitmapImage::draw(GraphicsContext* ctxt, const FloatRect& dst,
         }
     }
 
-    ctxt->platformContext()->drawPixmap(normalizedDst, *image, normalizedSrc);
+    QByteArray a = QByteArray::fromRawData(data()->data(), data()->size());
+    ctxt->platformContext()->drawPixmap(normalizedDst, *image, normalizedSrc, &a);
 
     ctxt->setCompositeOperation(previousOperator, previousBlendMode);
 
