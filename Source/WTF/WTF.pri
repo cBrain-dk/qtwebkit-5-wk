@@ -14,8 +14,16 @@ mac {
     INCLUDEPATH = $${ROOT_WEBKIT_DIR}/Source/WTF/icu $$INCLUDEPATH
     LIBS += -licucore
 } else:!use?(wchar_unicode): {
-    win32:contains(QT_CONFIG,static) LIBS += -lsicuin -lsicuuc -lsicudt
-    else:win32: LIBS += -licuin -licuuc -licudt
+    win32: {
+        iculibs=icuin icuuc icudt
+        icuprefix=
+        icusuffix=
+        contains(QT_CONFIG,static): icuprefix=s
+        debug: icusuffix=d
+        for(iculib, iculibs) {
+            LIBS += -l$$icuprefix$$iculib$$icusuffix
+        }
+    }
     else:!contains(QT_CONFIG,no-pkg-config):packagesExist("icu-i18n"): PKGCONFIG *= icu-i18n
     else:android: LIBS += -licui18n -licuuc
     else: LIBS += -licui18n -licuuc -licudata
