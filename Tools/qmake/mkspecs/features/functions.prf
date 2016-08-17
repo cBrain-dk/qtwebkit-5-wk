@@ -121,7 +121,7 @@ defineTest(addStrictSubdirOrderBetween) {
     firstVariables = $$computeSubdirVariables($${firstSubdir})
     secondVariables = $$computeSubdirVariables($${secondSubdir})
 
-    !contains(TEMPLATE, subdirs) {
+    !contains(TEMPLATE, (vc)?subdirs) {
         error("Strict subdir dependencies can only be used with subdirs template")
     }
 
@@ -160,7 +160,9 @@ defineTest(addStrictSubdirOrderBetween) {
     QMAKE_EXTRA_TARGETS += $${target_make_qmake}
 
     # Make things work even if qmake -r is used.
-    CONFIG += dont_recurse
+    !equals(TEMPLATE, vcsubdirs) {
+        CONFIG += dont_recurse
+    }
 
     export(SUBDIRS)
     export(NO_RECURSIVE_QMAKE_SUBDIRS)
