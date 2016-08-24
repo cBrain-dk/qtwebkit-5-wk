@@ -54,6 +54,9 @@ public:
     const IntRect& pageRect(size_t pageNumber) const { return m_pageRects[pageNumber]; }
     const Vector<IntRect>& pageRects() const { return m_pageRects; }
 
+    bool noReturnToScreenMode() { return m_noReturnToScreenMode; }
+    void setNoReturnToScreenMode(bool value) { m_noReturnToScreenMode = value; }
+
     float computeAutomaticScaleFactor(const FloatSize& availablePaperSize);
 
     // Enter print mode, updating layout for new page size.
@@ -90,6 +93,10 @@ private:
 
     // Used to prevent misuses of begin() and end() (e.g., call end without begin).
     bool m_isPrinting;
+
+    /* Make end() not restore screen mode. Useful to avoid pointless recalculation of layout
+     * when the frame isn't going to be shown after being printed. */
+    bool m_noReturnToScreenMode;
 };
 
 }

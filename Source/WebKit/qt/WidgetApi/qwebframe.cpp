@@ -921,6 +921,16 @@ QPair<int, QRectF> QWebPrinter::elementLocation(const QWebElement & e)
     return QPair<int,QRectF>(-1, QRectF());
 }
 
+bool QWebPrinter::noReturnToScreenMode()
+{
+    return d->printContext.noReturnToScreenMode();
+}
+
+void QWebPrinter::setNoReturnToScreenMode(bool value)
+{
+    d->printContext.setNoReturnToScreenMode(value);
+}
+
 /*!
     Return the painter used for printing.
 */

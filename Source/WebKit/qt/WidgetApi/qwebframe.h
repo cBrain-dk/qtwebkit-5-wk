@@ -122,6 +122,8 @@ public:
     QPainter * painter();
     int pageCount() const;
     QPair<int, QRectF> elementLocation(const QWebElement & e);
+    bool noReturnToScreenMode();
+    void setNoReturnToScreenMode(bool value);
 private:
     QWebPrinterPrivate * d;
 };

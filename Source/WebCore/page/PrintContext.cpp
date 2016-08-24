@@ -47,6 +47,7 @@ const float printingMaximumShrinkFactor = 2;
 PrintContext::PrintContext(Frame* frame)
     : m_frame(frame)
     , m_isPrinting(false)
+    , m_noReturnToScreenMode(false)
 {
 }
 
@@ -229,7 +230,8 @@ void PrintContext::end()
 {
     ASSERT(m_isPrinting);
     m_isPrinting = false;
-    m_frame->setPrinting(false, FloatSize(), FloatSize(), 0, AdjustViewSize);
+    if (!m_noReturnToScreenMode)
+        m_frame->setPrinting(false, FloatSize(), FloatSize(), 0, AdjustViewSize);
 }
 
 static RenderBoxModelObject* enclosingBoxModelObject(RenderObject* object)
