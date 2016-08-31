@@ -826,13 +826,10 @@ QWebPrinterPrivate::QWebPrinterPrivate(const QWebFrame *f, QPaintDevice *printer
     , frame(f)
     , graphicsContext(&p)
 {
-    const qreal zoomFactorX = (qreal)printer->logicalDpiX() / qt_defaultDpi();
-    const qreal zoomFactorY = (qreal)printer->logicalDpiY() / qt_defaultDpi();
-    IntRect pageRect(0, 0,
-                     int(printer->width() / zoomFactorX),
-                     int(printer->height() / zoomFactorY));
-    
-    printContext.begin(pageRect.width(), pageRect.height());
+    qreal zoomFactorX, zoomFactorY;
+    IntRect pageRect;
+
+    QWebPrinterPrivate::setupPrintContext(*f, *printer, printContext, zoomFactorX, zoomFactorY, pageRect);
     float pageHeight = 0;
     printContext.computePageRects(pageRect, /* headerHeight */ 0, /* footerHeight */ 0, /* userScaleFactor */ 1.0, pageHeight);
     
@@ -843,6 +840,27 @@ QWebPrinterPrivate::QWebPrinterPrivate(const QWebFrame *f, QPaintDevice *printer
 QWebPrinterPrivate::~QWebPrinterPrivate() 
 {
     printContext.end();
+}
+
+void QWebPrinterPrivate::setupPrintContext(const QWebFrame& frame, const QPaintDevice& printer, PrintContext& printContext,
+    qreal& zoomFactorX, qreal& zoomFactorY, IntRect& pageRect)
+{
+    zoomFactorX = (qreal)printer.logicalDpiX() / qt_defaultDpi();
+    zoomFactorY = (qreal)printer.logicalDpiY() / qt_defaultDpi();
+    pageRect = IntRect(0, 0,
+                     int(printer.width() / zoomFactorX),
+                     int(printer.height() / zoomFactorY));
+    
+    printContext.begin(pageRect.width(), pageRect.height());
+}
+
+void QWebPrinter::setupFrameForPrinting(const QWebFrame& frame, const QPaintDevice& printer)
+{
+    PrintContext printContext(frame.d->frame);
+    printContext.setNoReturnToScreenMode(true);
+    qreal zoomFactorX, zoomFactorY;
+    IntRect pageRect;
+    QWebPrinterPrivate::setupPrintContext(frame, printer, printContext, zoomFactorX, zoomFactorY, pageRect);
 }
 
 /*!

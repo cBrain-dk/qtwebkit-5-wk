@@ -116,6 +116,8 @@ private:
 #ifndef QT_NO_PRINTER
 class QWEBKIT_EXPORT QWebPrinter {
 public:
+    static void setupFrameForPrinting(const QWebFrame& frame, const QPaintDevice& printer);
+
     QWebPrinter(const QWebFrame * frame, QPaintDevice * printer, QPainter &painter);
     ~QWebPrinter();
     void spoolPage(int i) const;

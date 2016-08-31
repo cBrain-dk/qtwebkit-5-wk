@@ -49,6 +49,9 @@ public:
     
     QWebPrinterPrivate(const QWebFrame * frame, QPaintDevice *printer, QPainter &p);
     ~QWebPrinterPrivate();
+    
+    static void setupPrintContext(const QWebFrame& frame, const QPaintDevice& printer, WebCore::PrintContext& printContext,
+        qreal& zoomFactorX, qreal& zoomFactorY, WebCore::IntRect& pageRect);
 };
 
 class QWebFramePrivate : public QWebFrameAdapter {

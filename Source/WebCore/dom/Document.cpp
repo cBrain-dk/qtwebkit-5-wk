@@ -485,6 +485,7 @@ Document::Document(Frame* frame, const KURL& url, unsigned documentClasses)
 #endif
     , m_didAssociateFormControlsTimer(this, &Document::didAssociateFormControlsTimerFired)
     , m_hasInjectedPlugInsScript(false)
+    , m_layoutForPrintingIncomplete(false)
 {
     if (m_frame)
         provideContextFeaturesToDocumentFrom(this, m_frame->page());
@@ -2028,8 +2029,10 @@ void Document::attach(const AttachContext& context)
 #if USE(ACCELERATED_COMPOSITING)
     renderView()->setIsInWindow(true);
 #endif
-
-    recalcStyle(Force);
+    if (frame() && frame()->printingState().printing())
+        setupForPrintingModeOnLoad(frame()->printingState());
+    else
+        recalcStyle(Force);
 
     RenderObject* render = renderer();
     setRenderer(0);
@@ -2447,11 +2450,19 @@ void Document::implicitClose()
     // (if your platform is syncing flushes and limiting them to 60fps).
     m_overMinimumLayoutThreshold = true;
     if (!ownerElement() || (ownerElement()->renderer() && !ownerElement()->renderer()->needsLayout())) {
-        updateStyleIfNeeded();
         
         // Always do a layout after loading if needed.
-        if (view() && renderer() && (!renderer()->firstChild() || renderer()->needsLayout()))
-            view()->layout();
+        if (view() && renderer() && (!renderer()->firstChild() || renderer()->needsLayout())) {
+            PrintingState &printingState = frame()->printingState();
+            if (printingState.printing())
+                setPrinting(printingState, false);
+            else {
+                updateStyleIfNeeded();
+                view()->layout();
+            }
+        }
+        else
+            updateStyleIfNeeded();
     }
 
     m_processingLoadEvent = false;
@@ -2477,6 +2488,57 @@ void Document::implicitClose()
     if (svgExtensions())
         accessSVGExtensions()->startAnimations();
 #endif
+}
+
+void Document::setupForPrintingModeOnLoad(const PrintingState& s)
+{
+    ASSERT(s.printing());
+    setPrinting(true);
+    view()->adjustMediaTypeForPrinting(true);
+    recalcStyle(Force);
+    view()->prepareLayoutForPagination(s.pageSize());
+    m_layoutForPrintingIncomplete = true;
+}
+
+void Document::setPrinting(const PrintingState& s, bool suppressCacheValidation)
+{
+    // In setting printing, we should not validate resources already cached for the document.
+    // See https://bugs.webkit.org/show_bug.cgi?id=43704
+    ResourceCacheValidationSuppressor validationSuppressor(suppressCacheValidation ? cachedResourceLoader() : nullptr);
+
+    setPrinting(s.printing());
+    view()->adjustMediaTypeForPrinting(s.printing());
+
+    updateStyleIfNeeded();
+    styleResolverChanged(RecalcStyleImmediately);
+    if (frame()->shouldUsePrintingLayout()) {
+        view()->forceLayoutForPagination(s.pageSize(), s.originalPageSize(), s.maximumShrinkRatio(), s.shouldAdjustViewSize());
+    } else {
+        view()->forceLayout();
+        if (s.shouldAdjustViewSize() == AdjustViewSize)
+            view()->adjustViewSize();
+    }
+
+    // Subframes of the one we're printing don't lay out to the page size.
+    for (RefPtr<Frame> child = frame()->tree()->firstChild(); child; child = child->tree()->nextSibling())
+        child->setPrinting(s.printing(), FloatSize(), FloatSize(), 0, s.shouldAdjustViewSize());
+}
+
+void Document::finishPrinting()
+{
+    ASSERT(m_printing);
+    if (!m_layoutForPrintingIncomplete)
+        return;
+
+    const PrintingState& s = frame()->printingState();
+    view()->finishLayoutForPagination(s.pageSize(), s.originalPageSize(), s.maximumShrinkRatio(), s.shouldAdjustViewSize());
+
+    // TODO: Is this neccessary here?
+    // Subframes of the one we're printing don't lay out to the page size.
+    for (RefPtr<Frame> child = frame()->tree()->firstChild(); child; child = child->tree()->nextSibling())
+        child->setPrinting(s.printing(), FloatSize(), FloatSize(), 0, s.shouldAdjustViewSize());
+
+    m_layoutForPrintingIncomplete = false;
 }
 
 void Document::setParsing(bool b)

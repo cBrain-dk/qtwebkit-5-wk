@@ -40,6 +40,7 @@
 #include "MutationObserver.h"
 #include "PageVisibilityState.h"
 #include "PlatformScreen.h"
+#include "PrintingState.h"
 #include "QualifiedName.h"
 #include "ReferrerPolicy.h"
 #include "ScriptExecutionContext.h"
@@ -612,6 +613,9 @@ public:
     
     bool printing() const { return m_printing; }
     void setPrinting(bool p) { m_printing = p; }
+    void setupForPrintingModeOnLoad(const PrintingState& s);
+    void setPrinting(const PrintingState& printingState, bool suppressCacheValidation);
+    void finishPrinting();
 
     bool paginatedForScreen() const { return m_paginatedForScreen; }
     void setPaginatedForScreen(bool p) { m_paginatedForScreen = p; }
@@ -1568,6 +1572,8 @@ private:
     HashSet<RefPtr<Element> > m_associatedFormControls;
 
     bool m_hasInjectedPlugInsScript;
+
+    bool m_layoutForPrintingIncomplete;
 };
 
 inline void Document::notifyRemovePendingSheetIfNeeded()

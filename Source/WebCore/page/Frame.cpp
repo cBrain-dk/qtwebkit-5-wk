@@ -506,26 +506,21 @@ String Frame::matchLabelsAgainstElement(const Vector<String>& labels, Element* e
 }
 
 void Frame::setPrinting(bool printing, const FloatSize& pageSize, const FloatSize& originalPageSize, float maximumShrinkRatio, AdjustViewSizeOrNot shouldAdjustViewSize)
-{
-    // In setting printing, we should not validate resources already cached for the document.
-    // See https://bugs.webkit.org/show_bug.cgi?id=43704
-    ResourceCacheValidationSuppressor validationSuppressor(m_doc->cachedResourceLoader());
-
-    m_doc->setPrinting(printing);
-    view()->adjustMediaTypeForPrinting(printing);
-
-    m_doc->styleResolverChanged(RecalcStyleImmediately);
-    if (shouldUsePrintingLayout()) {
-        view()->forceLayoutForPagination(pageSize, originalPageSize, maximumShrinkRatio, shouldAdjustViewSize);
-    } else {
-        view()->forceLayout();
-        if (shouldAdjustViewSize == AdjustViewSize)
-            view()->adjustViewSize();
+{ 
+    if (!printing && !m_printingState.printing() && shouldAdjustViewSize == m_printingState.shouldAdjustViewSize())
+        return;
+    if (printing && m_printingState.printing() && 
+        pageSize == m_printingState.pageSize() &&
+        originalPageSize == m_printingState.originalPageSize() &&
+        maximumShrinkRatio == m_printingState.maximumShrinkRatio() &&
+        shouldAdjustViewSize == m_printingState.shouldAdjustViewSize()) {
+        m_doc->finishPrinting();
+        return;
     }
 
-    // Subframes of the one we're printing don't lay out to the page size.
-    for (RefPtr<Frame> child = tree()->firstChild(); child; child = child->tree()->nextSibling())
-        child->setPrinting(printing, FloatSize(), FloatSize(), 0, shouldAdjustViewSize);
+    m_printingState = PrintingState(printing, pageSize, originalPageSize, maximumShrinkRatio, shouldAdjustViewSize);
+
+    m_doc->setPrinting(m_printingState, true);
 }
 
 bool Frame::shouldUsePrintingLayout() const

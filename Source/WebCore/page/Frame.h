@@ -34,6 +34,7 @@
 #include "FrameTree.h"
 #include "IntRect.h"
 #include "NavigationScheduler.h"
+#include "PrintingState.h"
 #include "ScrollTypes.h"
 #include "UserScriptTypes.h"
 #include <wtf/RefCounted.h>
@@ -160,6 +161,8 @@ namespace WebCore {
         // Scale factor of this frame with respect to the container.
         float frameScaleFactor() const;
 
+        PrintingState printingState() const;
+
 #if USE(ACCELERATED_COMPOSITING)
         void deviceOrPageScaleFactorChanged();
 #endif
@@ -225,6 +228,8 @@ namespace WebCore {
 
         float m_pageZoomFactor;
         float m_textZoomFactor;
+
+        PrintingState m_printingState;
 
 #if ENABLE(ORIENTATION_EVENTS)
         int m_orientation;
@@ -334,6 +339,10 @@ namespace WebCore {
         return m_eventHandler.get();
     }
 
+    inline PrintingState Frame::printingState() const
+    {
+        return m_printingState;
+    }
 } // namespace WebCore
 
 #endif // Frame_h

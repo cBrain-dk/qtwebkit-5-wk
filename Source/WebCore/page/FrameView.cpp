@@ -3869,7 +3869,8 @@ void FrameView::forceLayout(bool allowSubtree)
     layout(allowSubtree);
 }
 
-void FrameView::forceLayoutForPagination(const FloatSize& pageSize, const FloatSize& originalPageSize, float maximumShrinkFactor, AdjustViewSizeOrNot shouldAdjustViewSize)
+
+void FrameView::prepareLayoutForPagination(const FloatSize& pageSize)
 {
     // Dumping externalRepresentation(m_frame->renderer()).ascii() is a good trick to see
     // the state of things before and after the layout
@@ -3882,7 +3883,19 @@ void FrameView::forceLayoutForPagination(const FloatSize& pageSize, const FloatS
         renderView->setLogicalWidth(flooredPageLogicalWidth);
         renderView->setPageLogicalHeight(flooredPageLogicalHeight);
         renderView->setNeedsLayoutAndPrefWidthsRecalc();
-        forceLayout();
+    }
+}
+
+void FrameView::finishLayoutForPagination(const FloatSize& pageSize, const FloatSize& originalPageSize, float maximumShrinkFactor, AdjustViewSizeOrNot shouldAdjustViewSize)
+{
+    // Dumping externalRepresentation(m_frame->renderer()).ascii() is a good trick to see
+    // the state of things before and after the layout
+    if (RenderView* renderView = this->renderView()) {
+        float pageLogicalWidth = renderView->style()->isHorizontalWritingMode() ? pageSize.width() : pageSize.height();
+        float pageLogicalHeight = renderView->style()->isHorizontalWritingMode() ? pageSize.height() : pageSize.width();
+
+        LayoutUnit flooredPageLogicalWidth = static_cast<LayoutUnit>(pageLogicalWidth);
+        LayoutUnit flooredPageLogicalHeight = static_cast<LayoutUnit>(pageLogicalHeight);
 
         // If we don't fit in the given page width, we'll lay out again. If we don't fit in the
         // page width when shrunk, we will lay out at maximum shrink and clip extra content.
@@ -3923,6 +3936,17 @@ void FrameView::forceLayoutForPagination(const FloatSize& pageSize, const FloatS
 
     if (shouldAdjustViewSize)
         adjustViewSize();
+}
+
+void FrameView::forceLayoutForPagination(const FloatSize& pageSize, const FloatSize& originalPageSize, float maximumShrinkFactor, AdjustViewSizeOrNot shouldAdjustViewSize)
+{
+    prepareLayoutForPagination(pageSize);
+    // Dumping externalRepresentation(m_frame->renderer()).ascii() is a good trick to see
+    // the state of things before and after the layout
+    if (RenderView* renderView = this->renderView()) {
+        forceLayout();
+    }
+    finishLayoutForPagination(pageSize, originalPageSize, maximumShrinkFactor, shouldAdjustViewSize);
 }
 
 void FrameView::adjustPageHeightDeprecated(float *newBottom, float oldTop, float oldBottom, float /*bottomLimit*/)

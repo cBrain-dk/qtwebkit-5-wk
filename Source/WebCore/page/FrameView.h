@@ -303,6 +303,8 @@ public:
 
     void forceLayout(bool allowSubtree = false);
     void forceLayoutForPagination(const FloatSize& pageSize, const FloatSize& originalPageSize, float maximumShrinkFactor, AdjustViewSizeOrNot);
+    void prepareLayoutForPagination(const FloatSize& pageSize);
+    void finishLayoutForPagination(const FloatSize& pageSize, const FloatSize& originalPageSize, float maximumShrinkFactor, AdjustViewSizeOrNot shouldAdjustViewSize);
 
     // FIXME: This method is retained because of embedded WebViews in AppKit.  When a WebView is embedded inside
     // some enclosing view with auto-pagination, no call happens to resize the view.  The new pagination model
