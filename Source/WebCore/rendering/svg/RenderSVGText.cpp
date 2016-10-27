@@ -414,6 +414,8 @@ void RenderSVGText::layout()
     // FIXME: We need to find a way to only layout the child boxes, if needed.
     FloatRect oldBoundaries = objectBoundingBox();
     ASSERT(childrenInline());
+
+    LayoutStateMaintainer statePusher(view(), this, locationOffset());
     forceLayoutInlineChildren();
 
     if (m_needsReordering)
@@ -432,6 +434,8 @@ void RenderSVGText::layout()
 
     repainter.repaintAfterLayout();
     setNeedsLayout(false);
+
+    statePusher.pop();
 }
 
 RootInlineBox* RenderSVGText::createRootInlineBox() 
