@@ -841,7 +841,7 @@ PassRefPtr<RenderStyle> StyleResolver::styleForDocument(Document* document, CSSF
     documentStyle->setDisplay(BLOCK);
     if (!seamlessWithParent) {
         documentStyle->setRTLOrdering(document->visuallyOrdered() ? VisualOrder : LogicalOrder);
-        documentStyle->setZoom(frame && !document->printing() ? frame->pageZoomFactor() : 1);
+        documentStyle->setZoom(frame ? frame->pageZoomFactor() : 1);
         documentStyle->setPageScaleTransform(frame ? frame->frameScaleFactor() : 1);
         documentStyle->setLocale(document->contentLanguage());
     }
